@@ -40,7 +40,111 @@ In addition to the above, there are often use-cases that are not directly suppor
 
 ![Azure Batch Architecture](./images/azure-batch/01_batch_overview.jpg)
 
+### Use Case
 
+I recently had a use case where there were data was being extracted out of SQL Managed Instance  on Azure. The data files were processed into parquet and multiple tables (of various size) could be written out in every extraction process. These parquet files, were of transactional in nature (staging) and hence were not partitioned as a) the skew could change every day 2) uneven distribution of data. 
+
+The target of these files expected them to be up to 100MB and equally split, to be able to effectively load data in parallel for performance.
+
+Hence, there was a need to pre-process and translate these files to fit the above requirements.  We are going to explore this use case with Azure Data Factory and Azure Batch.  
+
+
+
+### Tutorial
+
+We are going to setup everything step by step, and as long as you have an Azure account you would be able to follow along. In case you don't have one, you could sign up for a **free Azure account, that gives you 12 months of free services** [here](https://azure.microsoft.com/en-us/free/) and **Monthly Azure Credits for Visual Studio subscribers [here](https://azure.microsoft.com/en-us/pricing/member-offers/credit-for-visual-studio-subscribers/)**. We will go through the following steps:
+
+* [Setup Storage](#setup-storage)
+* [Setup Azure Data Factory](#setup-azure-data-factory)
+* [Create a simple pipeline in Data Factory](#create-a-simple-pipeline-in-data-factory)
+* [Setup Azure Batch](#setup-azure-batch)
+* Configure Azure Batch with Data Factory
+* Add a custom activity to pipeline
+* Create a python script
+* Execute the pipeline
+* Monitor pipeline execution in Data Factory
+* Monitor Azure Batch
+
+
+
+## Setup Storage
+
+Once you have setup a resource group, the first thing we will deploy would be a storage account. This is where our source and target data will reside.
+
+1. ![Setup Storage Account](./images/azure-batch/02_setup_storage_ac.jpg)
+
+Configure 'Basics' as follows. 
+
+![Setup Storage Account](./images/azure-batch/02_setup_storage_ac_1.jpg)
+
+During the lab, we would setup folders, so enable 'Hierarchical Namespace'.
+
+![Setup Storage Account](./images/azure-batch/02_setup_storage_ac_1a.jpg)
+
+Click 'Create'.
+
+![Setup Storage Account](./images/azure-batch/02_setup_storage_ac_2.jpg)
+
+Once 'Storage Account' is setup, go to resource. We will set up 2 containers now. 
+
+Click 'Containers'
+
+![Setup Storage Account](./images/azure-batch/02_setup_storage_ac_3.jpg)
+
+
+
+Let's setup 2 containers: `filestoreage` as the source/target for the files that we will process and `batchstorage` for files that will be used by Azure Batch later. 
+
+![Setup Storage Account](./images/azure-batch/02_setup_storage_ac_4.jpg)
+
+
+
+![Setup Storage Account](./images/azure-batch/02_setup_storage_ac_5.jpg)
+
+![Setup Storage Account](./images/azure-batch/02_setup_storage_ac_6.jpg)
+
+Navigate to `filestorage` and create 3 directories: `input`, `source`, `target`.
+
+![Setup Storage Account](./images/azure-batch/02_setup_storage_ac_7.jpg)
+
+## Setup Azure Data Factory
+
+Now we need to add an ADF instance to our resource group. Click ''+Add New' under 'Analytics' categrory.
+
+![Setup Storage Account](./images/azure-batch/03_setup_adf_1.jpg)
+
+Provide values as below, and click 'Create'.
+
+![Setup Storage Account](./images/azure-batch/03_setup_adf_2.jpg)
+
+
+
+Once the deployment is successful, go to Data Factory Overview screen and click on 'Author and Monitor' to launch the console.
+
+![Setup Storage Account](./images/azure-batch/03_setup_adf_3.jpg)
+
+The following screen will show up.
+
+![Setup Storage Account](./images/azure-batch/03_setup_adf_4.jpg)
+
+
+
+## Create a Simple Pipeline in Data Factory
+
+Let's create a simple pipeline to source some data that we will use for testing and place it in the appropriate folder. 
+
+## Setup Azure Batch
+
+For setting up Azure Batch, there are two things that we need to configure:
+
+* Setup a Batch Account
+* Create a pool of compute nodes
+
+### Setup a Batch Account
+
+Click 'Create a Resource' and then select 'Batch Service' from 'Compute' category.
+
+![Setup Storage Account](./images/azure-batch/04_setup_batch_1.jpg)
 
 
 

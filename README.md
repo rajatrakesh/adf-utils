@@ -671,6 +671,52 @@ The output of this activity provides the details on the execution of this activi
 
 ![Setup Storage Account](./images/azure-batch/07_monitor_pipeline_7.jpg)
 
+### Monitor compute jobs in Azure Batch
+
+Now let's look at the output of the Pipeline and monitor the job in Azure Batch. 
+
+Looking at our storage account, we find the source file has been properly copied in the 'source folder'
+
+![Setup Storage Account](./images/azure-batch/08_monitor_azure_batch_1.jpg)
+
+Looking at our 'target' folder, the files have been successfully split into multiple segments.
+
+![Setup Storage Account](./images/azure-batch/08_monitor_azure_batch_2.jpg)
+
+Let's also review the execution within our Batch Account.
+
+![Setup Storage Account](./images/azure-batch/08_monitor_azure_batch_3.jpg)
+
+Click Jobs in the left pane to review the jobs that have been executed.
+
+![Setup Storage Account](./images/azure-batch/08_monitor_azure_batch_4.jpg)
+
+The task that we execute in the above pipeline is shown here. 
+
+![Setup Storage Account](./images/azure-batch/08_monitor_azure_batch_5.jpg)
+
+Let's drill into the task id. We can now review additional information about the task, any errors reported and also any outputs that our task sent to the console. 
+
+![Setup Storage Account](./images/azure-batch/08_monitor_azure_batch_6.jpg)
+
+stderr.txt file is empty as no errors were reported. Any errors during the execution of the Batch are written here. 
+
+![Setup Storage Account](./images/azure-batch/08_monitor_azure_batch_7.jpg)
+
+stdout.txt provides us a lot of additional information. This was the output that we had configured within our python program. 
+
+![Setup Storage Account](./images/azure-batch/08_monitor_azure_batch_8.jpg)
+
+If we click the 'Files on Node', we can confirm that no sensitive information / data was written to the compute node. Our script read the entire data to memory and wrote it directly on to blob storage, removing the need for a temp 'scratch' location. 
+
+![Setup Storage Account](./images/azure-batch/08_monitor_azure_batch_9.jpg)
+
+This concludes our lab on Azure Data Factor and Azure Batch setup. Hope this was useful towards helping build a better understanding of the use case , deployment, setup and monitoring. 
+
+Do check back on this page as I would be incorporating additional scenarios to this in due course. 
+
+-Rajat
+
 References:
 
 [Using custom activities in Azure Data Factory Pipeline](https://docs.microsoft.com/en-us/azure/data-factory/transform-data-using-dotnet-custom-activity)

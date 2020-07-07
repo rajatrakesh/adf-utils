@@ -38,6 +38,8 @@ In addition to the above, there are often use-cases that are not directly suppor
 
 ### Azure Batch Architecture
 
+The following diagram shows steps in a common Batch workflow, with a client application or hosted service using Batch to run a parallel workload.
+
 ![Azure Batch Architecture](./images/azure-batch/01_batch_overview.jpg)
 
 ### Use Case

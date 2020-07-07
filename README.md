@@ -10,8 +10,7 @@ Azure Batch is extremely useful to quickly deploy and scale high-performance com
 
 Workloads can be executed on demand, or on a schedule and it is extremely easy to deploy, as we will see in the use case, without having to manage individual VMs, virtual networks etc. For Additional details on Batch, please refer to:
 
-* [Basics of Batch](https://docs.microsoft.com/en-us/azure/azure-sql/database/sql-database-paas-overview)
-* [Batch Feature Overview](https://docs.microsoft.com/en-us/azure/batch/batch-service-workflow-features)
+* [Basics of Batch](https://docs.microsoft.com/en-us/azure/batch/batch-technical-overview)
 * [Batch Documentation](https://docs.microsoft.com/en-us/azure/batch/batch-service-workflow-features)
 
 ### Azure Data Factory
@@ -20,10 +19,8 @@ Data Factory can help create managed data pipelines that move data from on-premi
 
 Additional details on Data Factory are available here:
 
-* [Data Factor Introduction](https://docs.microsoft.com/en-us/azure/data-factory/v1/data-factory-introduction)
+* [Data Factory Introduction](https://docs.microsoft.com/en-us/azure/data-factory/v1/data-factory-introduction)
 * [Tutorial: Building Data Pipelines with Data Factory](https://docs.microsoft.com/en-us/azure/data-factory/v1/data-factory-build-your-first-pipeline)
-
-
 
 ### Azure Data Factory and Azure Batch 
 
@@ -33,8 +30,6 @@ Azure Data Factory has two type of activities:
 * [Data Transformation](https://docs.microsoft.com/en-us/azure/data-factory/transform-data): To transform data during various compute services such as Azure HDInsigh, Azure Batch, Azure Machine learning etc. 
 
 In addition to the above, there are often use-cases that are not directly supported by ADF, for example where you may need to transform the data in a certain way. For such operations, ADF provides an option for **Custom activity** where you can build your own transformation and processing logic and integrate this in the ADF pipeline as part of the flow. This Custom Activity would then run your code in the compute environment provided by Azure Batch, over a pool of virtual machines. 
-
-
 
 ### Azure Batch Architecture
 
@@ -50,9 +45,7 @@ The target of these files expected them to be up to 100MB and equally split, to 
 
 Hence, there was a need to pre-process and translate these files to fit the above requirements.  We are going to explore this use case with Azure Data Factory and Azure Batch.  
 
-
-
-### Tutorial
+## Tutorial
 
 We are going to setup everything step by step, and as long as you have an Azure account you would be able to follow along. In case you don't have one, you could sign up for a **free Azure account, that gives you 12 months of free services** [here](https://azure.microsoft.com/en-us/free/) and **Monthly Azure Credits for Visual Studio subscribers [here](https://azure.microsoft.com/en-us/pricing/member-offers/credit-for-visual-studio-subscribers/)**. We will go through the following steps:
 
@@ -67,9 +60,7 @@ We are going to setup everything step by step, and as long as you have an Azure 
 * [Monitor pipeline execution in Data Factory](#monitor-pipeline-execution-in-data-factory)
 * [Monitor compute job in Azure Batch](#monitor-compute-job-in-azure-batch)
 
-
-
-## Setup Storage
+### Setup Storage
 
 Once you have setup a resource group, the first thing we will deploy would be a storage account. This is where our source and target data will reside.
 
@@ -109,7 +100,9 @@ Navigate to `filestorage` and create 3 directories: `input`, `source`, `target`.
 
 ![Setup Storage Account](./images/azure-batch/02_setup_storage_ac_7.jpg)
 
-## Setup Azure Data Factory
+[Back to Index](#tutorial)
+
+### Setup Azure Data Factory
 
 Now we need to add an ADF instance to our resource group. Click ''+Add New' under 'Analytics' categrory.
 
@@ -129,9 +122,9 @@ The following screen will show up.
 
 ![Setup Storage Account](./images/azure-batch/03_setup_adf_4.jpg)
 
+[Back to Index](#tutorial)
 
-
-## Setup Azure Batch
+### Setup Azure Batch
 
 For setting up Azure Batch, there are two things that we need to configure:
 
@@ -225,9 +218,9 @@ The  pool will deploy, and once successfully deployed, it will be visible under 
 
 ![Setup Storage Account](./images/azure-batch/04_setup_batch_13.jpg)
 
+[Back to Index](#tutorial)
 
-
-## Create a Simple Pipeline in Data Factory
+### Create a Simple Pipeline in Data Factory
 
 Let's create a simple pipeline to source some data that we will use for testing and place it in the appropriate folder. 
 
@@ -364,9 +357,9 @@ The file 'NewFile.parq' has been create in the `source` folder.
 
 ![Setup Storage Account](./images/azure-batch/05_create_pipeline_16.jpg)
 
+[Back to Index](#tutorial)
 
-
-## Configure Azure Batch with Data Factory
+### Configure Azure Batch with Data Factory
 
 The only setup that is required in ADF for invoking Azure Batch compute in the pipeline is to setup a linked service. 
 
@@ -425,7 +418,7 @@ Folder Path: This will be the folder where the above python script is located. I
 
 ```
 
-
+[Back to Index](#tutorial)
 
 ### Create A Python Script
 
@@ -587,6 +580,8 @@ x = 1
 main()
 ```
 
+[Back to Index](#tutorial)
+
 ### Pass Parameters to the Python Script
 
 In our pipeline, we can setup parameters and variables that can be leveraged by different activities in our pipeline. 
@@ -628,6 +623,8 @@ The two are now linked.
 
 Validate your pipeline for any errors. Publish All.
 
+[Back to Index](#tutorial)
+
 ### Execute the Pipeline
 
 Now let's execute the entire flow. 
@@ -638,6 +635,8 @@ Before you execute the trigger:
 * Delete the 'NewFile.parq' from the 'filestorage/source' folder since the file will be created again.
 
 Execute the pipeline by clicking 'Add trigger' > 'Trigger Now'.
+
+[Back to Index](#tutorial)
 
 ### Monitor Pipeline Execution In Data Factory
 
@@ -673,7 +672,9 @@ The output of this activity provides the details on the execution of this activi
 
 ![Setup Storage Account](./images/azure-batch/07_monitor_pipeline_7.jpg)
 
-### Monitor compute jobs in Azure Batch
+[Back to Index](#tutorial)
+
+### Monitor compute job in Azure Batch
 
 Now let's look at the output of the Pipeline and monitor the job in Azure Batch. 
 
@@ -718,6 +719,8 @@ This concludes our lab on Azure Data Factor and Azure Batch setup. Hope this was
 Do check back on this page as I would be incorporating additional scenarios to this in due course. 
 
 -Rajat
+
+[Back to Index](#tutorial)
 
 References:
 

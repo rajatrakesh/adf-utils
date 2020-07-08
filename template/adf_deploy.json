@@ -1,0 +1,365 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"uniqueSuffix": {
+			"type": "String",
+			"metadata": {
+				"description": "Suffix added to all resource name to make them unique."
+			}
+		}
+	},
+	"variables": {
+		"location": "[resourceGroup().location]",
+		"storageAccountName": "[concat('delabstorage', parameters('uniqueSuffix'))]",
+		"batchAccountName": "[concat('delabbatch', parameters('uniqueSuffix'))]",
+		"dataFactoryName": "[concat('delabadf', parameters('uniqueSuffix'))]",
+		"dataFactoryId": "[concat('Microsoft.DataFactory/factories/', variables('dataFactoryName'))]",
+		"storageConnectionName": "[concat('storageconnection', uniqueString(resourceGroup().id))]",
+		"apiVersion": "[providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]]",
+		"storageAccountId": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+		"batchAccountId": "[concat(resourceGroup().id,'/providers/','Microsoft.Batch/batchAccounts/', variables('batchAccountName'))]",
+		"batchPoolName": "[concat(variables('batchAccountName'), '/adflabpool')]"
+	},
+	"resources": [
+		{
+			"type": "Microsoft.Storage/storageAccounts",
+			"apiVersion": "2019-06-01",
+			"name": "[variables('storageAccountName')]",
+			"location": "[variables('location')]",
+			"sku": {
+				"name": "Standard_LRS",
+				"tier": "Standard"
+			},
+			"kind": "StorageV2",
+			"properties": {
+				"largeFileSharesState": "Disabled",
+				"isHnsEnabled": true,
+				"networkAcls": {
+					"bypass": "AzureServices",
+					"virtualNetworkRules": [],
+					"ipRules": [],
+					"defaultAction": "Allow"
+				},
+				"supportsHttpsTrafficOnly": true,
+				"encryption": {
+					"services": {
+						"file": {
+							"keyType": "Account",
+							"enabled": true
+						},
+						"blob": {
+							"keyType": "Account",
+							"enabled": true
+						}
+					},
+					"keySource": "Microsoft.Storage"
+				},
+				"accessTier": "Hot"
+			}
+		},
+		{
+			"type": "Microsoft.Storage/storageAccounts/blobServices",
+			"apiVersion": "2019-06-01",
+			"name": "[concat(variables('storageAccountName'), '/default')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+			],
+			"sku": {
+				"name": "Standard_LRS",
+				"tier": "Standard"
+			},
+			"properties": {
+				"cors": {
+					"corsRules": []
+				},
+				"deleteRetentionPolicy": {
+					"enabled": false
+				}
+			}
+		},
+		{
+			"type": "Microsoft.Storage/storageAccounts/fileServices",
+			"apiVersion": "2019-06-01",
+			"name": "[concat(variables('storageAccountName'), '/default')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+			],
+			"sku": {
+				"name": "Standard_LRS",
+				"tier": "Standard"
+			},
+			"properties": {
+				"cors": {
+					"corsRules": []
+				}
+			}
+		},
+		{
+			"type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+			"apiVersion": "2019-06-01",
+			"name": "[concat(variables('storageAccountName'), '/default/batchstorage')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]",
+				"[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+			],
+			"properties": {
+				"publicAccess": "None"
+			}
+		},
+		{
+			"type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+			"apiVersion": "2019-06-01",
+			"name": "[concat(variables('storageAccountName'), '/default/filestorage')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]",
+				"[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+			],
+			"properties": {
+				"publicAccess": "None"
+			}
+		},
+		{
+			"type": "Microsoft.Batch/batchAccounts",
+			"apiVersion": "2020-05-01",
+			"name": "[variables('batchAccountName')]",
+			"location": "[variables('location')]",
+			"identity": {
+				"type": "None"
+			},
+			"properties": {
+				"poolAllocationMode": "BatchService",
+				"publicNetworkAccess": "Enabled",
+				"encryption": {
+					"keySource": "Microsoft.Batch"
+				}
+			}
+		},
+		{
+			"type": "Microsoft.Batch/batchAccounts/pools",
+			"apiVersion": "2020-05-01",
+			"name": "[variables('batchPoolName')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Batch/batchAccounts', variables('batchAccountName'))]"
+			],
+			"properties": {
+				"displayName": "Pool Create in Explorer",
+				"vmSize": "STANDARD_F2S_V2",
+				"interNodeCommunication": "Disabled",
+				"maxTasksPerNode": 1,
+				"taskSchedulingPolicy": {
+					"nodeFillType": "Spread"
+				},
+				"deploymentConfiguration": {
+					"virtualMachineConfiguration": {
+						"imageReference": {
+							"publisher": "microsoft-dsvm",
+							"offer": "dsvm-windows",
+							"sku": "server-2016",
+							"version": "latest"
+						},
+						"nodeAgentSkuId": "batch.node.windows amd64"
+					}
+				},
+				"scaleSettings": {
+					"fixedScale": {
+						"targetDedicatedNodes": 1,
+						"targetLowPriorityNodes": 0,
+						"resizeTimeout": "PT15M"
+					}
+				},
+				"startTask": {
+					"commandLine": "cmd /c \"pip install pandas dask pyarrow\"",
+					"userIdentity": {
+						"autoUser": {
+							"scope": "Pool",
+							"elevationLevel": "NonAdmin"
+						}
+					},
+					"maxTaskRetryCount": 0,
+					"waitForSuccess": true
+				}
+			}
+		},
+		{
+			"name": "[variables('dataFactoryName')]",
+			"apiVersion": "2018-06-01",
+			"type": "Microsoft.DataFactory/factories",
+			"location": "[variables('location')]",
+			"identity": {
+				"type": "SystemAssigned"
+			},
+			"resources": [
+				{
+					"name": "[concat(variables('dataFactoryName'), '/StorageLinkedService')]",
+					"type": "Microsoft.DataFactory/factories/linkedServices",
+					"apiVersion": "2018-06-01",
+					"properties": {
+						"annotations": [],
+						"type": "AzureBlobStorage",
+						"typeProperties": {
+							"connectionString": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listKeys(variables('storageAccountId'),'2015-05-01-preview').key1)]"
+						}
+					},
+					"dependsOn": [
+						"[variables('dataFactoryName')]"
+					]
+				},
+				{
+					"name": "[concat(variables('dataFactoryName'), '/SourceParquet')]",
+					"type": "Microsoft.DataFactory/factories/datasets",
+					"apiVersion": "2018-06-01",
+					"properties": {
+						"linkedServiceName": {
+							"referenceName": "StorageLinkedService",
+							"type": "LinkedServiceReference"
+						},
+						"annotations": [],
+						"type": "Parquet",
+						"typeProperties": {
+							"location": {
+								"type": "AzureBlobStorageLocation",
+								"fileName": "NewFile.parq",
+								"folderPath": "input",
+								"container": "filestorage"
+							},
+							"compressionCodec": "snappy"
+						}
+					},
+					"dependsOn": [
+						"[variables('dataFactoryName')]",
+						"[concat(variables('dataFactoryId'), '/linkedServices/StorageLinkedService')]"
+					]
+				},
+				{
+					"name": "[concat(variables('dataFactoryName'), '/TargetParquet')]",
+					"type": "Microsoft.DataFactory/factories/datasets",
+					"apiVersion": "2018-06-01",
+					"properties": {
+						"linkedServiceName": {
+							"referenceName": "StorageLinkedService",
+							"type": "LinkedServiceReference"
+						},
+						"annotations": [],
+						"type": "Parquet",
+						"typeProperties": {
+							"location": {
+								"type": "AzureBlobStorageLocation",
+								"fileName": "NewFile.parq",
+								"folderPath": "source",
+								"container": "filestorage"
+							},
+							"compressionCodec": "snappy"
+						}
+					},
+					"dependsOn": [
+						"[variables('dataFactoryName')]",
+						"[concat(variables('dataFactoryId'), '/linkedServices/StorageLinkedService')]"
+					]
+				},
+				{
+					"name": "[concat(variables('dataFactoryName'), '/BatchLinkedService')]",
+					"type": "Microsoft.DataFactory/factories/linkedServices",
+					"apiVersion": "2018-06-01",
+					"properties": {
+						"annotations": [],
+						"type": "AzureBatch",
+						"typeProperties": {
+							"accountName": "[variables('batchAccountName')]",
+							"accessKey": {
+								"type": "SecureString",
+								"value": "[listKeys(variables('batchAccountName'),'2020-05-01').primary]"
+							},
+							"batchUri": "[concat('https://',variables('batchAccountName'),'.',variables('location'),'.batch.azure.com')]",
+							"poolName": "adflabpool",
+                            "linkedServiceName": {
+								"referenceName": "StorageLinkedService",
+								"type": "LinkedServiceReference"
+							}
+						}
+					},
+					"dependsOn": [
+						"[variables('dataFactoryName')]",
+                        "[variables('batchAccountName')]",
+                        "[variables('batchPoolName')]",
+                        "[concat(variables('dataFactoryId'), '/linkedServices/StorageLinkedService')]"
+					]
+				},
+                {
+                    "name": "[concat(variables('dataFactoryName'), '/SampleCopyPipeline')]",
+					"type": "Microsoft.DataFactory/factories/pipelines",
+					"apiVersion": "2018-06-01",
+					"properties": {
+                        "activities": [
+                            {
+								"name": "MyCopyActivity",
+								"type": "Copy",
+								"dependsOn": [
+                                ],
+								"policy": {
+									"timeout": "7.00:00:00",
+									"retry": 0,
+									"retryIntervalInSeconds": 30,
+									"secureOutput": false,
+									"secureInput": false
+								},
+								"userProperties": [],
+								"typeProperties": {
+									"source": {
+										"type": "ParquetSource",
+										"storeSettings": {
+											"type": "AzureBlobStorageReadSettings",
+											"recursive": true,
+											"wildcardFolderPath": "input",
+											"wildcardFileName": "*.parq",
+											"enablePartitionDiscovery": false
+										}
+									},
+									"sink": {
+										"type": "ParquetSink",
+										"storeSettings": {
+											"type": "AzureBlobStorageWriteSettings",
+											"copyBehavior": "MergeFiles"
+										}
+									},
+									"enableStaging": false,
+									"translator": {
+										"type": "TabularTranslator",
+										"typeConversion": true,
+										"typeConversionSettings": {
+											"allowDataTruncation": true,
+											"treatBooleanAsNumber": false
+										}
+									}
+								},
+								"inputs": [
+									{
+										"referenceName": "SourceParquet",
+										"type": "DatasetReference",
+										"parameters": {}
+									}
+								],
+								"outputs": [
+									{
+										"referenceName": "TargetParquet",
+										"type": "DatasetReference",
+										"parameters": {}
+									}
+								]
+							}
+                        ]
+                    },
+                    "dependsOn":[  
+                        "[parameters('dataFactoryName')]",
+                        "[variables('batchAccountName')]",
+                        "[variables('batchPoolName')]",
+                        "[concat(variables('dataFactoryId'), '/linkedServices/StorageLinkedService')]",
+                        "[concat(variables('dataFactoryId'), '/linkedServices/BatchLinkedService')]",
+                        "[concat(variables('dataFactoryId'), '/datasets/SourceParquet')]",
+                        "[concat(variables('dataFactoryId'), '/datasets/TargetParquet')]"
+                    ]
+                }
+			]
+		}
+	]
+}

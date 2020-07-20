@@ -19,7 +19,7 @@
 		"apiVersion": "[providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]]",
 		"storageAccountId": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
 		"batchAccountId": "[concat(resourceGroup().id,'/providers/','Microsoft.Batch/batchAccounts/', variables('batchAccountName'))]",
-		"batchPoolName": "[concat(variables('batchAccountName'), '/adflabpool')]"
+		"batchPoolName": "[concat('delabadfpool', parameters('uniqueSuffix'))]"
 	},
 	"resources": [
 		{
@@ -138,7 +138,7 @@
 		{
 			"type": "Microsoft.Batch/batchAccounts/pools",
 			"apiVersion": "2020-05-01",
-			"name": "[variables('batchPoolName')]",
+			"name": "[concat(variables('batchAccountName'),'/',variables('batchPoolName'))]",
 			"dependsOn": [
 				"[resourceId('Microsoft.Batch/batchAccounts', variables('batchAccountName'))]"
 			],
@@ -258,8 +258,8 @@
 					]
 				},
 				{
-					"name": "[concat(variables('dataFactoryName'), '/BatchLinkedService')]",
 					"type": "Microsoft.DataFactory/factories/linkedServices",
+					"name": "[concat(variables('dataFactoryName'), '/BatchLinkedService')]",
 					"apiVersion": "2018-06-01",
 					"properties": {
 						"annotations": [],
@@ -271,8 +271,8 @@
 								"value": "[listKeys(variables('batchAccountName'),'2020-05-01').primary]"
 							},
 							"batchUri": "[concat('https://',variables('batchAccountName'),'.',variables('location'),'.batch.azure.com')]",
-							"poolName": "adflabpool",
-                            "linkedServiceName": {
+							"poolName": "[variables('batchPoolName')]",
+							"linkedServiceName": {
 								"referenceName": "StorageLinkedService",
 								"type": "LinkedServiceReference"
 							}
@@ -280,22 +280,20 @@
 					},
 					"dependsOn": [
 						"[variables('dataFactoryName')]",
-                        "[variables('batchAccountName')]",
-                        "[variables('batchPoolName')]",
-                        "[concat(variables('dataFactoryId'), '/linkedServices/StorageLinkedService')]"
+						"[variables('batchAccountName')]",
+						"[concat(variables('dataFactoryId'), '/linkedServices/StorageLinkedService')]"
 					]
 				},
-                {
-                    "name": "[concat(variables('dataFactoryName'), '/SampleCopyPipeline')]",
+				{
+					"name": "[concat(variables('dataFactoryName'), '/SampleCopyPipeline')]",
 					"type": "Microsoft.DataFactory/factories/pipelines",
 					"apiVersion": "2018-06-01",
 					"properties": {
-                        "activities": [
-                            {
+						"activities": [
+							{
 								"name": "MyCopyActivity",
 								"type": "Copy",
-								"dependsOn": [
-                                ],
+								"dependsOn": [],
 								"policy": {
 									"timeout": "7.00:00:00",
 									"retry": 0,
@@ -346,19 +344,83 @@
 										"parameters": {}
 									}
 								]
+							},
+							{
+								"name": "SplitParquetInPython",
+								"description": "Custom Pipeline with Azure Batch to split files",
+								"type": "Custom",
+								"dependsOn": [
+									{
+										"activity": "MyCopyActivity",
+										"dependencyConditions": [
+											"Succeeded"
+										]
+									}
+								],
+								"policy": {
+									"timeout": "7.00:00:00",
+									"retry": 0,
+									"retryIntervalInSeconds": 30,
+									"secureOutput": false,
+									"secureInput": false
+								},
+								"userProperties": [],
+								"typeProperties": {
+									"command": {
+										"value": "@concat('python splitparquet.py',' ',variables('storageAccountName'),' ',variables('storageKey'),' ',variables('containerName'),' ',variables('outputFolder'),' ',variables('blobName'),' ',variables('fileChunkSize'))",
+										"type": "Expression"
+									},
+									"resourceLinkedService": {
+										"referenceName": "StorageLinkedService",
+										"type": "LinkedServiceReference"
+									},
+									"folderPath": "batchstorage",
+									"referenceObjects": {
+										"linkedServices": [],
+										"datasets": []
+									}
+								},
+								"linkedServiceName": {
+									"referenceName": "BatchLinkedService",
+									"type": "LinkedServiceReference"
+								}
 							}
-                        ]
-                    },
-                    "dependsOn":[  
-                        "[parameters('dataFactoryName')]",
-                        "[variables('batchAccountName')]",
-                        "[variables('batchPoolName')]",
-                        "[concat(variables('dataFactoryId'), '/linkedServices/StorageLinkedService')]",
-                        "[concat(variables('dataFactoryId'), '/linkedServices/BatchLinkedService')]",
-                        "[concat(variables('dataFactoryId'), '/datasets/SourceParquet')]",
-                        "[concat(variables('dataFactoryId'), '/datasets/TargetParquet')]"
-                    ]
-                }
+						],
+						"variables": {
+							"containerName": {
+								"type": "String",
+								"defaultValue": "filestorage"
+							},
+							"storageAccountName": {
+								"type": "String",
+								"defaultValue": "[variables('storageAccountName')]"
+							},
+							"storageKey": {
+								"type": "String",
+								"defaultValue": "[listKeys(variables('storageAccountId'),'2015-05-01-preview').key1]"
+							},
+							"outputFolder": {
+								"type": "String",
+								"defaultValue": "/target/"
+							},
+							"blobName": {
+								"type": "String",
+								"defaultValue": "/source/NewFile.parq"
+							},
+							"fileChunkSize": {
+								"type": "String",
+								"defaultValue": "4"
+							}
+						}
+					},
+					"dependsOn": [
+						"[variables('dataFactoryName')]",
+						"[variables('batchAccountName')]",
+						"[concat(variables('dataFactoryId'), '/linkedServices/StorageLinkedService')]",
+						"[concat(variables('dataFactoryId'), '/datasets/SourceParquet')]",
+						"[concat(variables('dataFactoryId'), '/datasets/TargetParquet')]"
+					]
+				}
 			]
 		}
 	]
